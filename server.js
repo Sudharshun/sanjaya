@@ -1,21 +1,56 @@
 'use strict';
 
-const express = require('express');
-const socketIO = require('socket.io');
-const path = require('path');
+const PORT = process.env.PORT || 8080;
 
-const PORT = process.env.PORT || 3000;
-const INDEX = path.join(__dirname, 'index.html');
+var app = require('http').createServer(handler)
+    , io = require('socket.io').listen(app)
+    , fs = require('fs')
 
-const server = express()
-    .use((req, res) => res.sendFile(INDEX) )
-.listen(PORT, () => console.log(`Listening on ${ PORT }`));
+app.listen(PORT);
 
-const io = socketIO(server);
+var clients = {};
 
-io.on('connection', (socket) => {
-    console.log('Client connected');
-socket.on('disconnect', () => console.log('Client disconnected'));
+function handler (req, res) {
+    console.log('Listening');
+    fs.readFile(__dirname + '/index.html',
+        function (err, data) {
+            if (err) {
+                res.writeHead(500);
+                return res.end('Error loading index.html');
+            }
+
+            res.writeHead(200);
+            res.end(data);
+        });
+}
+
+io.sockets.on('connection', function (socket) {
+
+    socket.on('add-user', function(data){
+        clients[data.username] = {
+            "socket": socket.id
+        };
+    });
+
+    socket.on('private-message', function(data){
+        console.log("Sending: " + data.content + " to " + data.username);
+        if (clients[data.username]){
+            io.sockets.connected[clients[data.username].socket].emit("add-message", data);
+        } else {
+            console.log("User does not exist: " + data.username);
+        }
+    });
+
+    //Removing the socket on disconnect
+    socket.on('disconnect', function() {
+        for(var name in clients) {
+            if(clients[name].socket === socket.id) {
+                delete clients[name];
+                break;
+            }
+        }
+    })
+
 });
 
-setInterval(() => io.emit('time', new Date().toTimeString()), 1000);
+

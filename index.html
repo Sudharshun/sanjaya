@@ -1,13 +1,121 @@
-<html>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Sanjaya - Keeping your stakeholders informed</title>
+
+    <style>
+        .chat-form { display: none; }
+    </style>
+</head>
 <body>
-<p id='server-time'></p>
-<script src="/socket.io/socket.io.js"></script>
+
+<form class="username-form" method="post" action="">
+    Enter you Staff id: <input type="text" />
+    <input type="submit" value="Join" />
+</form>
+
+<form class="chat-form" method="post" action="">
+    <div>Staff ID <span id="username">Guest</span></div>
+    <label>Send Notification To:</label> <input id="recipient" /><br />
+    <label>Message: </label><br />
+    <textarea id="message"></textarea>
+    <input type="submit" value="Send" />
+
+    <ul id="messages">
+
+    </ul>
+</form>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
+
+    // var externalIp = '<%= externalIp %>';
     var socket = io();
-    var el = document.getElementById('server-time');
-    socket.on('time', function(timeString) {
-        el.innerHTML = 'Server time: ' + timeString;
+    //var socket = io(webSocketUri);
+    // Add a username
+    $(".username-form").on("submit", function(){
+
+        // Tell the server about it
+        var username = $(this).children("input").val();
+        socket.emit("add-user", {"username": username});
+
+        // Remove this form and show the chat form
+        $(this).remove();
+        $("#username").text(username);
+        chat_form.show();
+        return false;
     });
+
+    // Chat form
+    var chat_form = $(".chat-form");
+    chat_form.on("submit", function(){
+
+        // Send the message to the server
+        socket.emit("private-message", {
+            "username": $(this).find("input:first").val(),
+            "content": $(this).find("textarea").val()
+        });
+
+        // Empty the form
+        $(this).find("input:first, textarea").val('');
+        return false;
+    });
+
+    // Whenever we receieve a message, append it to the <ul>
+    socket.on("add-message", function(data){
+        $("#messages").append($("<li>", {
+            "text": data.content
+        }));
+        var username = $(this).children("input").val();
+
+        createNotification(data.content, username)
+    });
+
+
+    // function for creating the notification
+    function createNotification(message,userName) {
+
+        // Let's check if the browser supports notifications
+        if (!"Notification" in window) {
+            console.log("This browser does not support notifications.");
+        }
+
+        // Let's check if the user is okay to get some notification
+        else if (Notification.permission === "granted") {
+            // If it's okay let's create a notification
+
+            var img = '/images/money.png';
+            var text = 'Hey ' + userName + ',' + message;
+            var notification = new Notification('', {body: text, icon: img});
+
+            window.navigator.vibrate(500);
+        }
+
+        // Otherwise, we need to ask the user for permission
+        // Note, Chrome does not implement the permission static property
+        // So we have to check for NOT 'denied' instead of 'default'
+        else if (Notification.permission !== 'denied') {
+            Notification.requestPermission(function (permission) {
+
+                // Whatever the user answers, we make sure Chrome stores the information
+                if (!('permission' in Notification)) {
+                    Notification.permission = permission;
+                }
+
+                // If the user is okay, let's create a notification
+                if (permission === "granted") {
+                    var img = '/images/money.png';
+                    var text = 'Hey ' + userName + ',' + message;
+                    var notification = new Notification('To do list', {body: text, icon: img});
+
+                    window.navigator.vibrate(500);
+                }
+            });
+        }
+    };
+
 </script>
 </body>
 </html>
