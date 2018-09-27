@@ -68,7 +68,7 @@
         $("#messages").append($("<li>", {
             "text": data.content
         }));
-        var username = $(this).children("input").val();
+        var username = $("#username").text();
 
         createNotification(data.content, username)
     });
@@ -88,7 +88,7 @@
 
             var img = '/images/money.png';
             var text = 'Hey ' + userName + ',' + message;
-            var notification = new Notification('', {body: text, icon: img});
+            var notification = new Notification('Sanjaya', {body: text, icon: img});
 
             window.navigator.vibrate(500);
         }
@@ -108,7 +108,7 @@
                 if (permission === "granted") {
                     var img = '/images/money.png';
                     var text = 'Hey ' + userName + ',' + message;
-                    var notification = new Notification('To do list', {body: text, icon: img});
+                    var notification = new Notification('Sanjaya', {body: text, icon: img});
 
                     window.navigator.vibrate(500);
                 }
